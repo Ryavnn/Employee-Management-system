@@ -1,4 +1,4 @@
-# main.py
+
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -14,22 +14,22 @@ CORS(app, supports_credentials=True,
      origins="http://localhost:5173",     
      allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-# Configure SQLite database
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@localhost:5433/employee_management'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Add these to your Flask config
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Or 'None' with Secure=True
 
-# Set a secure secret key for session management (in production, use environment variables)
+app.config['SESSION_COOKIE_SECURE'] = False  
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  
+
+
 app.config['JWT_SECRET_KEY'] = 'your_super_secret_session_key'
 app.config['SECRET_KEY'] = 'your_super_secret_session_key'
 
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 
-# Enable CORS to allow requests from React frontend
+
 
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
@@ -263,13 +263,11 @@ def update_manager_model():
 # Initialize the database with an HR user
 def init_db():
     with app.app_context():
-        # Create all tables
+
         db.create_all()
         
-        # Check if HR user exists
         hr_user = User.query.filter_by(username='hr_user').first()
-        
-        # Create default HR user if none exists
+
         if not hr_user:
             default_hr = User(
                 username='hr_user',
@@ -288,7 +286,7 @@ def login():
     user = User.query.filter_by(username=username).first()
     
     if user and check_password_hash(user.password, password):
-        # Generate JWT token
+
         token = jwt.encode({
             'user_id': user.id,
             'username': user.username,
@@ -313,9 +311,9 @@ def verify_token(token):
         payload = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
         return payload
     except jwt.ExpiredSignatureError:
-        return None  # Token expired
+        return None  
     except jwt.InvalidTokenError:
-        return None  # Invalid token
+        return None  
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -384,7 +382,7 @@ def create_user():
             'success': True,
             'username': username,
             'role': role,
-            'default_password': default_password  # Send back default password for HR to share
+            'default_password': default_password  
         })
     except Exception as e:
         db.session.rollback()
@@ -423,7 +421,7 @@ def get_current_user():
 
 
 # Employee CRUD endpoints
-# Example fix for your get_employees function in main.py
+
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     auth_header = request.headers.get('Authorization')
@@ -455,7 +453,7 @@ def get_employees():
 
 @app.route('/api/employees', methods=['POST'])
 def add_employee():
-    # Check if user is authenticated and has HR role using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
@@ -474,12 +472,10 @@ def add_employee():
     if missing_fields:
         return jsonify({'success': False, 'message': f'Missing required fields: {", ".join(missing_fields)}'}), 400
 
-    # Check if email already exists (for employee record)
     existing_employee = Employee.query.filter_by(email=data.get('email')).first()
     if existing_employee:
         return jsonify({'success': False, 'message': 'Employee with this email already exists'}), 400
 
-    # Also check if a user with the same email (as username) already exists
     existing_user = User.query.filter_by(username=data.get('email')).first()
     if existing_user:
         return jsonify({'success': False, 'message': 'User with this email already exists'}), 400
@@ -491,13 +487,11 @@ def add_employee():
         return jsonify({'success': False, 'message': 'Manager not found'}), 400
 
     try:
-        # Parse date string into Python date object
+
         start_date = datetime.strptime(data.get('startDate'), '%Y-%m-%d').date()
 
-        # Convert salary to float if provided
         salary = float(data.get('salary')) if data.get('salary') else None
 
-        # Create new employee
         new_employee = Employee(
             name=data.get('name'),
             email=data.get('email'),
@@ -512,7 +506,7 @@ def add_employee():
 
         db.session.add(new_employee)
 
-        # Create corresponding user login with default password
+ 
         default_password = 'employee123'
         new_user = User(
             username=data.get('email'),
@@ -540,7 +534,7 @@ def add_employee():
 
 @app.route('/api/employees/<int:employee_id>', methods=['GET'])
 def get_employee(employee_id):
-    # Check if user is authenticated
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -566,7 +560,7 @@ def get_employee(employee_id):
 
 @app.route('/api/employees/<int:employee_id>', methods=['PUT'])
 def update_employee(employee_id):
-    # Authenticate using JWT token
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -641,7 +635,7 @@ def delete_employee(employee_id):
 
 @app.route('/api/employees/<int:employee_id>/assign_manager', methods=['POST'])
 def assign_manager(employee_id):
-    # Authenticate using JWT token
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
@@ -704,7 +698,7 @@ def get_managers():
 
 @app.route('/api/managers', methods=['POST'])
 def add_manager():
-    # Check if user is authenticated and has HR role using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -717,7 +711,7 @@ def add_manager():
 
     data = request.get_json()
 
-    # Validate required fields
+
     required_fields = ['name', 'email', 'title', 'department', 'phone', 'hireDate']
     for field in required_fields:
         if not data.get(field):
@@ -726,7 +720,7 @@ def add_manager():
                 'message': f'Missing required field: {field}'
             }), 400
 
-    # Check if email already exists
+
     existing_manager = Manager.query.filter_by(email=data.get('email')).first()
     existing_employee = Employee.query.filter_by(email=data.get('email')).first()
     
@@ -736,7 +730,7 @@ def add_manager():
             'message': 'Email already exists'
         }), 409
 
-    # Also check if a user with the same email (as username) already exists
+  
     existing_user = User.query.filter_by(username=data.get('email')).first()
     if existing_user:
         return jsonify({
@@ -745,13 +739,12 @@ def add_manager():
         }), 409
 
     try:
-        # Parse date string into Python date object
+
         hire_date = datetime.strptime(data.get('hireDate'), '%Y-%m-%d').date()
 
-        # Convert directReports to int if provided
+
         direct_reports = int(data.get('directReports', 0))
 
-        # Create new manager
         new_manager = Manager(
             name=data.get('name'),
             title=data.get('title'),
@@ -765,7 +758,7 @@ def add_manager():
 
         db.session.add(new_manager)
 
-        # Create corresponding user login with default password
+
         default_password = 'manager123'
         new_user = User(
             username=data.get('email'),
@@ -795,7 +788,7 @@ def add_manager():
 
 @app.route('/api/managers/<int:manager_id>', methods=['GET'])
 def get_manager(manager_id):
-    # Check if user is authenticated
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -820,7 +813,7 @@ def get_manager(manager_id):
 
 @app.route('/api/managers/<int:manager_id>', methods=['PUT'])
 def update_manager(manager_id):
-    # Authenticate using JWT token
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -885,10 +878,10 @@ def delete_manager(manager_id):
         return jsonify({'success': False, 'message': 'Manager not found'}), 404
 
     try:
-        # Delete the manager
+
         db.session.delete(manager)
         
-        # Also delete the user account associated with the manager's email
+  
         user = User.query.filter_by(username=manager.email).first()
         if user:
             db.session.delete(user)
@@ -933,7 +926,7 @@ def handle_project(project_id):
         db.session.commit()
         return jsonify(project.to_dict())
     
-    else:  # DELETE
+    else:  
         db.session.delete(project)
         db.session.commit()
         return '', 204
@@ -941,7 +934,7 @@ def handle_project(project_id):
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def handle_tasks():
     if request.method == 'GET':
-        # Check for project filter in query parameters
+
         project_id = request.args.get('projectId')
         assigned_to = request.args.get('assignedTo')
 
@@ -952,7 +945,7 @@ def handle_tasks():
             tasks = Task.query.filter_by(assignedTo=assigned_to)
 
         if not project_id and not assigned_to:
-            # Fetch tasks assigned to the logged-in user
+
             auth_header = request.headers.get('Authorization')
             if not auth_header or not auth_header.startswith('Bearer '):
                 return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -963,7 +956,7 @@ def handle_tasks():
             if not user_data:
                 return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
-            # Get employee ID based on username (email)
+
             employee = Employee.query.filter_by(email=user_data['username']).first()
             if not employee:
                 return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -973,7 +966,7 @@ def handle_tasks():
         else:
             tasks = Task.query.all()
         return jsonify([task.to_dict() for task in tasks])
-    else:  # POST
+    else:  
         data = request.json
         deadline = datetime.fromisoformat(data['deadline']) if data.get('deadline') else None
         new_task = Task(
@@ -1007,7 +1000,7 @@ def handle_task(task_id):
         db.session.commit()
         return jsonify(task.to_dict())
     
-    else:  # DELETE
+    else:  
         db.session.delete(task)
         db.session.commit()
         return '', 204
@@ -1035,7 +1028,7 @@ def get_employee_profile():
 # Time Tracking APIs
 @app.route('/api/time-tracking/status', methods=['GET'])
 def get_time_status():
-    # Check if user is authenticated and has employee role using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1046,15 +1039,14 @@ def get_time_status():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
     
     employee_id = employee.id
     today = date.today()
-    
-    # Get latest time entry for today
+
     time_entry = TimeEntry.query.filter_by(
         employee_id=employee_id, 
         date=today
@@ -1071,7 +1063,7 @@ def get_time_status():
 
 @app.route('/api/time-tracking/clock', methods=['POST'])
 def clock_time():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1082,18 +1074,18 @@ def clock_time():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
     
     employee_id = employee.id
     data = request.get_json()
-    action = data.get('action')  # 'in' or 'out'
+    action = data.get('action')  
     today = date.today()
     now = datetime.utcnow()
     
-    # Get latest time entry for today
+
     time_entry = TimeEntry.query.filter_by(
         employee_id=employee_id, 
         date=today,
@@ -1138,7 +1130,7 @@ def clock_time():
 
 @app.route('/api/time-tracking/history', methods=['GET'])
 def get_time_history():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1149,14 +1141,14 @@ def get_time_history():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
     
     employee_id = employee.id
     
-    # Get entries for the last 7 days
+
     entries = TimeEntry.query.filter(
         TimeEntry.employee_id == employee_id,
         TimeEntry.date >= date.today() - timedelta(days=7)
@@ -1175,7 +1167,7 @@ def get_time_history():
 # Task Management APIs
 @app.route('/api/tasks', methods=['GET'])
 def get_employee_tasks():
-    # Check if user is authenticated using JWT
+  
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1186,7 +1178,7 @@ def get_employee_tasks():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1206,7 +1198,7 @@ def get_employee_tasks():
 
 @app.route('/api/tasks/<int:task_id>/status', methods=['PUT'])
 def update_task_status(task_id):
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1216,8 +1208,7 @@ def update_task_status(task_id):
 
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-    
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1232,27 +1223,27 @@ def update_task_status(task_id):
         print(f"Debug: Task with ID {task_id} not found or not assigned to employee ID {employee_id}")
         return jsonify(success=False, message="Task not found"), 404
     
-    # Update task status
+
     old_status = task.status
     task.status = new_status
     db.session.commit()
     
-    # Update project status if any task is in progress or completed
+
     project = Project.query.get(task.projectId)
     if project:
         if any(t.status in ['In Progress', 'Completed'] for t in project.tasks):
             project.status = 'On Going'
             db.session.commit()
     
-    # Update performance metrics
+
     update_performance_metrics(employee_id, old_status, new_status)
     
     return jsonify(success=True, task=task.to_dict())
 
-# Performance Metrics API
+
 @app.route('/api/performance-metrics', methods=['GET'])
 def get_performance_metrics():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1263,7 +1254,7 @@ def get_performance_metrics():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1272,7 +1263,7 @@ def get_performance_metrics():
     
     metrics = PerformanceMetric.query.filter_by(employee_id=employee_id).first()
     if not metrics:
-        # Create default metrics if not exists
+
         metrics = PerformanceMetric(employee_id=employee_id)
         db.session.add(metrics)
         db.session.commit()
@@ -1282,7 +1273,7 @@ def get_performance_metrics():
 # Leave Management APIs
 @app.route('/api/leave-balance', methods=['GET'])
 def get_leave_balance():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1293,7 +1284,7 @@ def get_leave_balance():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1307,7 +1298,7 @@ def get_leave_balance():
     ).first()
     
     if not balance:
-        # Create new leave balance for current year
+
         balance = LeaveBalance(
             employee_id=employee_id,
             year=current_year
@@ -1319,7 +1310,7 @@ def get_leave_balance():
 
 @app.route('/api/leave-history', methods=['GET'])
 def get_leave_history():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1330,7 +1321,7 @@ def get_leave_history():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1346,7 +1337,7 @@ def get_leave_history():
 
 @app.route('/api/leave-request', methods=['POST'])
 def create_leave_request():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1357,7 +1348,7 @@ def create_leave_request():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1365,11 +1356,11 @@ def create_leave_request():
     employee_id = employee.id
     data = request.get_json()
     
-    # Validate leave request data
+
     if not all(key in data for key in ['type', 'startDate', 'endDate']):
         return jsonify(success=False, message="Missing required fields"), 400
     
-    # Create leave request
+
     leave_request = LeaveRequest(
         employee_id=employee_id,
         type=data['type'],
@@ -1386,7 +1377,7 @@ def create_leave_request():
 # Upcoming Deadlines API
 @app.route('/api/upcoming-deadlines', methods=['GET'])
 def get_upcoming_deadlines():
-    # Check if user is authenticated using JWT
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1397,7 +1388,7 @@ def get_upcoming_deadlines():
     if not user_data:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    # Get employee ID based on username (email)
+
     employee = Employee.query.filter_by(email=user_data['username']).first()
     if not employee:
         return jsonify({'success': False, 'message': 'Employee not found'}), 404
@@ -1431,20 +1422,18 @@ def update_performance_metrics(employee_id, old_status, new_status):
         metrics = PerformanceMetric(employee_id=employee_id)
         db.session.add(metrics)
     
-    # Update task counts
+
     if old_status != 'Completed' and new_status == 'Completed':
         metrics.tasks_completed += 1
     elif old_status == 'Completed' and new_status != 'Completed':
         metrics.tasks_completed -= 1
-    
-    # Update in-progress count
+
     in_progress_count = EmployeeTask.query.filter_by(
         assigned_to=employee_id,
         status='In Progress'
     ).count()
     metrics.tasks_in_progress = in_progress_count
-    
-    # Calculate on-time completion rate
+
     completed_tasks = EmployeeTask.query.filter(
         EmployeeTask.assigned_to == employee_id,
         EmployeeTask.status == 'Completed'
@@ -1455,12 +1444,11 @@ def update_performance_metrics(employee_id, old_status, new_status):
                             if task.due_date and datetime.combine(task.due_date, datetime.min.time()) >= task.created_at)
         metrics.on_time_completion_rate = (on_time_count / len(completed_tasks)) * 100
     
-    # Update average task completion time
+
     if completed_tasks:
         total_days = 0
         for task in completed_tasks:
-            # Assuming there's a completed_at field or using last update
-            # Ensure TaskHistory is defined or remove its usage if not needed
+
             task_history = TaskHistory.query.filter_by(
                 task_id=task.id, 
                 new_status='Completed'
@@ -1472,7 +1460,7 @@ def update_performance_metrics(employee_id, old_status, new_status):
         
         metrics.average_task_completion = total_days / len(completed_tasks) if len(completed_tasks) > 0 else 0
     
-    # Calculate projects contributed
+
     project_count = db.session.query(func.count(func.distinct(Task.projectId))).filter(
         Task.assignedTo == employee_id
     ).scalar()
@@ -1483,7 +1471,7 @@ def update_performance_metrics(employee_id, old_status, new_status):
 
 @app.route('/api/manager/employees', methods=['GET'])
 def get_manager_employees():
-    # Authenticate using JWT token
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Missing or invalid token'}), 401
@@ -1507,7 +1495,7 @@ def get_manager_employees():
 
 @app.route('/api/manager/tasks', methods=['GET'])
 def get_manager_tasks():
-    # Authenticate using JWT token
+
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
@@ -1518,18 +1506,18 @@ def get_manager_tasks():
     if not user_data or user_data['role'] != 'manager':
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
-    # Get manager details
+
     manager_email = user_data['username']
     manager = Manager.query.filter_by(email=manager_email).first()
 
     if not manager:
         return jsonify({'success': False, 'message': 'Manager not found'}), 404
 
-    # Get employees managed by the manager
+
     employees = Employee.query.filter_by(manager_id=manager.id).all()
     employee_ids = [employee.id for employee in employees]
 
-    # Fetch tasks assigned to these employees
+
     tasks = Task.query.filter(Task.assignedTo.in_(employee_ids)).all()
     task_list = [task.to_dict() for task in tasks]
 
@@ -1538,18 +1526,15 @@ def get_manager_tasks():
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    # Total employees
+
     total_employees = Employee.query.count()
 
-    # New hires (e.g., employees with status "New Hire")
     new_hires = Employee.query.filter_by(status="New Hire").count()
 
-    # Attendance rate (e.g., percentage of employees clocked in today)
     today = date.today()
     total_time_entries = TimeEntry.query.filter_by(date=today).count()
     attendance_rate = (total_time_entries / total_employees) * 100 if total_employees > 0 else 0
 
-    # Total managers
     total_managers = Manager.query.count()
 
     return jsonify({

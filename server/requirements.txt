@@ -1,0 +1,7 @@
+Flask
+flask-cors
+Flask-SQLAlchemy
+PyJWT
+Werkzeug
+flask-jwt-extended
+gunicorn
